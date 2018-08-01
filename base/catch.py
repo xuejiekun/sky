@@ -4,63 +4,77 @@ from bs4 import BeautifulSoup
 
 
 class BaseRequests:
-    default_useragent = r'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0'
-    default_accept_language = r'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2'
+    DEFAULT_USERAGENT = r'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0'
+    DEFAULT_ACCEPT_LANGUAGE = r'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2'
 
     def __init__(self):
-        self.s = requests.Session()
-        self.s.headers.update({'User-Agent': self.default_useragent,
-                               'Accept-Language': self.default_accept_language})
+        self.session = requests.Session()
+        self.session.headers.update({'User-Agent': self.DEFAULT_USERAGENT,
+                                     'Accept-Language': self.DEFAULT_ACCEPT_LANGUAGE})
 
     # 设置请求头
     def set_headers(self, useragent):
-        self.s.headers.update({'User-Agent': useragent})
+        self.session.headers.update({'User-Agent': useragent})
 
     # 设置referer
     def set_referer(self, referer):
-        self.s.headers.update({'Referer': referer})
+        self.session.headers.update({'Referer': referer})
 
+    # 清空referer
     def clear_referer(self):
-        self.s.headers.pop('Referer')
+        self.session.headers.pop('Referer')
 
-    # get url
+    # get请求
     def get_page(self, url, timeout=10, **kwargs):
         try:
-            self.r = self.s.get(url, timeout=timeout, **kwargs)
+            self.response = self.session.get(url, timeout=timeout, **kwargs)
         except:
             return False
         return True
 
-    # 创建bsobj
-    def build_bs4(self):
-        self.bsobj = BeautifulSoup(self.r.content, 'lxml')
+    # post请求
+    def post_page(self, url, data=None, json=None, timeout=10, **kwargs):
+        try:
+            self.response = self.session.post(url, data=data, json=json, timeout=timeout, **kwargs)
+        except:
+            return False
+        return True
 
+    # 获取特定编码的text
     def text(self, encoding=None):
         if encoding:
-            encoding_save = self.r.encoding
-            self.r.encoding = encoding
-            text = self.r.text
-            self.r.encoding = encoding_save
+            encoding_save = self.response.encoding
+            self.response.encoding = encoding
+            text = self.response.text
+            self.response.encoding = encoding_save
             return text
-        return self.r.text
+        return self.response.text
 
+    # 返回json
     def json(self, **kwargs):
-        return self.r.json(**kwargs)
+        return self.response.json(**kwargs)
+
+    # 获取网页标题
+    def get_title(self):
+        self.bsobj = BeautifulSoup(self.response.content, 'lxml')
+        return self.bsobj.title.text
 
     # 将请求内容保存为图片
     def save_as_pic(self, filename='1.jpg'):
         with open(filename, 'wb') as fp:
-            fp.write(self.r.content)
+            fp.write(self.response.content)
 
     # 将当前页面保存为html
-    def save_as_html(self, filename='1.html', encoding=None):
+    def save_as_html(self, filename='1.html'):
+        with open(filename, 'wb', ) as fp:
+            fp.write(self.response.content)
+
+    def save_as_file(self, filename, content, encoding=None):
         with open(filename, 'w', encoding=encoding) as fp:
-            fp.write(self.r.text)
+            fp.write(content)
 
 
 if __name__ == '__main__':
-    a = BaseRequests()
-    a.get_page(r'https://www.baidu.com')
-    a.build_bs4()
-    print(a.bsobj.title)
-    a.save_as_html(encoding='utf-8')
+    br = BaseRequests()
+    br.get_page(r'https://www.baidu.com')
+    br.save_as_html('{}.html'.format(br.get_title()))
